@@ -55,6 +55,13 @@ export async function hasGallerySession(albumId: string) {
   return verifySignedValue(jar.get(`veyra_gallery_${albumId}`)?.value, albumId);
 }
 
+export async function canViewGallery(album: { id: string; status: string; access_mode: string }) {
+  if (await isAdmin()) return true;
+  if (album.status !== "live") return false;
+  if (album.access_mode === "link") return true;
+  return hasGallerySession(album.id);
+}
+
 export async function hashGuestPassword(albumId: string, password: string) {
   const digest = await crypto.subtle.digest(
     "SHA-256",

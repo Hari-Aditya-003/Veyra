@@ -1,0 +1,14 @@
+{
+  "name": "Snap HUB",
+  "short_name": "Snap HUB",
+  "description": "Host and share private event photos and videos through one QR.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8fc",
+  "theme_color": "#ff3d98",
+  "orientation": "any",
+  "icons": [
+    { "src": "/snap-hub-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/snap-hub-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

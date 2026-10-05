@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { createGallerySession, hashGuestPassword } from "@/lib/security";
 import { getAlbumByToken } from "@/lib/data";
+import { isRateLimited } from "@/lib/rate-limit";
 
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
+  if (isRateLimited(request, `gallery-unlock:${token}`, 15, 10 * 60 * 1000)) {
+    return NextResponse.redirect(new URL(`/g/${token}?error=rate-limited`, request.url), 303);
+  }
   const album = await getAlbumByToken(token);
   if (!album) return NextResponse.redirect(new URL("/", request.url), 303);
   const form = await request.formData();

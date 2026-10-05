@@ -19,7 +19,10 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   const photo = await getPhoto(id);
   if (!photo) return NextResponse.json({ error: "Photo not found" }, { status: 404 });
   await env.BUCKET.delete(photo.object_key);
-  await env.DB.prepare("DELETE FROM photos WHERE id = ?").bind(id).run();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE albums SET cover_photo_id = NULL WHERE cover_photo_id = ?").bind(id),
+    env.DB.prepare("DELETE FROM photos WHERE id = ?").bind(id),
+  ]);
   return NextResponse.json({ ok: true });
 }
 
@@ -28,10 +31,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const { id } = await context.params;
   const photo = await getPhoto(id);
   if (!photo) return NextResponse.json({ error: "Media not found" }, { status: 404 });
-  const body = (await request.json()) as { caption?: string; isFeatured?: boolean };
+  const body = (await request.json()) as { caption?: string; isFeatured?: boolean; moderationStatus?: string };
   const caption = String(body.caption ?? photo.caption).trim().slice(0, 240);
   const isFeatured = typeof body.isFeatured === "boolean" ? Number(body.isFeatured) : Number(photo.is_featured);
-  await env.DB.prepare("UPDATE photos SET caption = ?, is_featured = ? WHERE id = ?")
-    .bind(caption, isFeatured, id).run();
-  return NextResponse.json({ ok: true, caption, is_featured: isFeatured });
+  const moderationStatus = ["pending", "approved", "rejected"].includes(String(body.moderationStatus))
+    ? String(body.moderationStatus) : photo.moderation_status;
+  await env.DB.prepare("UPDATE photos SET caption = ?, is_featured = ?, moderation_status = ? WHERE id = ?")
+    .bind(caption, isFeatured, moderationStatus, id).run();
+  return NextResponse.json({ ok: true, caption, is_featured: isFeatured, moderation_status: moderationStatus });
 }

@@ -1,16 +1,17 @@
 import { env } from "cloudflare:workers";
 import { getAlbumByToken, getPhoto } from "@/lib/data";
-import { hasGallerySession } from "@/lib/security";
+import { canViewGallery } from "@/lib/security";
 
 export async function GET(request: Request, context: { params: Promise<{ token: string; photoId: string }> }) {
   const { token, photoId } = await context.params;
   const album = await getAlbumByToken(token);
-  if (!album || !(await hasGallerySession(album.id))) return new Response("Unauthorized", { status: 401 });
+  if (!album || !(await canViewGallery(album))) return new Response("Unauthorized", { status: 401 });
   const photo = await getPhoto(photoId);
-  if (!photo || photo.album_id !== album.id) return new Response("Not found", { status: 404 });
+  if (!photo || photo.album_id !== album.id || photo.moderation_status !== "approved") return new Response("Not found", { status: 404 });
   const object = await env.BUCKET.get(photo.object_key);
   if (!object) return new Response("Not found", { status: 404 });
   const download = new URL(request.url).searchParams.get("download") === "1";
+  if (download && !album.downloads_enabled) return new Response("Downloads are disabled for this event", { status: 403 });
   return new Response(object.body, {
     headers: {
       "Content-Type": photo.content_type,

@@ -1,8 +1,12 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { adminCookieName, createAdminSession } from "@/lib/security";
+import { isRateLimited } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  if (isRateLimited(request, "admin-login", 10, 10 * 60 * 1000)) {
+    return NextResponse.redirect(new URL("/?error=too-many-attempts", request.url), 303);
+  }
   const form = await request.formData();
   const username = String(form.get("username") ?? "");
   const password = String(form.get("password") ?? "");

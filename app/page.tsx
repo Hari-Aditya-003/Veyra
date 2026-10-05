@@ -1,4 +1,4 @@
-import { Download, LockKeyhole, Play, QrCode, Sparkles } from "lucide-react";
+import { Heart, ImageUp, LockKeyhole, Play, QrCode, Sparkles } from "lucide-react";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
@@ -20,12 +20,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
           <div className="launch-pill"><Sparkles size={15} /> One QR. Every memory.</div>
           <h1>Share the <em>whole event</em>, not a hundred links.</h1>
           <p>
-            Photos, videos, captions and slideshows in one joyful gallery. Guests scan, sign in and relive it all — no app installation needed.
+            Photos, videos, guest uploads, favorites and live slideshows in one joyful gallery. Guests scan and relive it all — no app installation needed.
           </p>
           <div className="feature-pills">
             <span><QrCode size={17} /> QR guest access</span>
             <span><Play size={17} /> Slideshow</span>
-            <span><Download size={17} /> Easy downloads</span>
+            <span><ImageUp size={17} /> Guest uploads</span>
+            <span><Heart size={17} /> Saved favorites</span>
             <span><Sparkles size={17} /> Magic Find beta</span>
           </div>
           <div className="event-strip" aria-label="Supported event types">
@@ -40,7 +41,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
               <div className="round-icon"><LockKeyhole size={21} /></div>
             </div>
             <p>Create events, upload media, personalize the gallery and download its QR.</p>
-            {error && <div className="login-error">That username or password is not correct.</div>}
+            {error && <div className="login-error">{error === "too-many-attempts" ? "Too many sign-in attempts. Please wait a few minutes." : "That username or password is not correct."}</div>}
             <form action="/api/admin/login" method="post" className="pink-form">
               <label>Username<input name="username" autoComplete="username" required placeholder="Your username" /></label>
               <label>Password<input name="password" type="password" autoComplete="current-password" required placeholder="Your password" /></label>
