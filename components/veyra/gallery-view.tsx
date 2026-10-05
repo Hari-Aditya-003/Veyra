@@ -6,6 +6,7 @@ import {
   ImageUp, MapPin, Maximize2, Play, Search, Sparkles, Star, Upload, X,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import Link from "next/link";
 
 type GalleryMedia = {
   id: string; filename: string; contentType: string; caption: string; isFeatured: boolean;
@@ -37,9 +38,9 @@ export function GalleryView({ album, token, media: initialMedia, collections }: 
   useEffect(() => {
     const stored = window.localStorage.getItem(`snap-hub-favorites:${token}`);
     if (stored) {
-      try { setFavorites(new Set(JSON.parse(stored) as string[])); } catch { window.localStorage.removeItem(`snap-hub-favorites:${token}`); }
+      try { queueMicrotask(() => setFavorites(new Set(JSON.parse(stored) as string[]))); } catch { window.localStorage.removeItem(`snap-hub-favorites:${token}`); }
     }
-    if (new URLSearchParams(window.location.search).get("upload") === "1") setUploadOpen(true);
+    if (new URLSearchParams(window.location.search).get("upload") === "1") queueMicrotask(() => setUploadOpen(true));
   }, [token]);
 
   const filtered = useMemo(() => media.filter((item) => {
@@ -94,7 +95,7 @@ export function GalleryView({ album, token, media: initialMedia, collections }: 
       <Toaster richColors position="top-center" />
       <div className="emoji-sky gallery-emojis" aria-hidden="true"><span>✨</span><span>🎉</span><span>🌸</span><span>📸</span><span>🪩</span><span>💛</span></div>
       <header className="memory-header">
-        <a href="/" aria-label="Snap HUB home"><img src="/snap-hub-logo.png" alt="Snap HUB" /></a>
+        <Link href="/" aria-label="Snap HUB home"><img src="/snap-hub-logo.png" alt="Snap HUB" /></Link>
         <div><span>{media.length} memories</span>{album.allowGuestUploads && <button className="soft-action" onClick={() => setUploadOpen(true)}><Upload /> Add memories</button>}<a className="show-link" href={`/g/${token}/slideshow`}><Play /> Live slideshow</a></div>
       </header>
 

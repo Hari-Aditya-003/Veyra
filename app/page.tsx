@@ -1,4 +1,5 @@
 import { Heart, ImageUp, LockKeyhole, Play, QrCode, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
@@ -8,10 +9,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
         <span>✨</span><span>🎉</span><span>🌸</span><span>📸</span><span>🪩</span><span>🥳</span><span>💃</span><span>🎂</span>
       </div>
       <header className="snap-header">
-        <a className="snap-brand" href="/" aria-label="Snap HUB home">
+        <Link className="snap-brand" href="/" aria-label="Snap HUB home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/snap-hub-logo.png" alt="Snap HUB" />
-        </a>
+        </Link>
         <div className="header-note"><span /> Built for every celebration</div>
       </header>
 

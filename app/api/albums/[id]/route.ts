@@ -21,7 +21,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const location = String(body.location ?? album.location).trim().slice(0, 160);
   const theme = themes.has(String(body.theme)) ? String(body.theme) : album.theme;
   const expectedGuests = Math.max(0, Math.min(100000, Number(body.expectedGuests ?? album.expected_guests) || 0));
-  const status = ["draft", "live", "completed"].includes(String(body.status)) ? String(body.status) : album.status;
+  const status = ["draft", "live", "paused", "completed"].includes(String(body.status)) ? String(body.status) : album.status;
   const accessMode = ["password", "link"].includes(String(body.accessMode)) ? String(body.accessMode) : album.access_mode;
   const moderationMode = ["manual", "instant"].includes(String(body.moderationMode)) ? String(body.moderationMode) : album.moderation_mode;
   const allowGuestUploads = typeof body.allowGuestUploads === "boolean" ? Number(body.allowGuestUploads) : Number(album.allow_guest_uploads);

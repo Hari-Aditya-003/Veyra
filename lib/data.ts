@@ -19,6 +19,9 @@ export type AlbumRecord = {
   downloads_enabled: number;
   event_slug: string | null;
   cover_photo_id: string | null;
+  slideshow_playing: number;
+  slideshow_position: number;
+  slideshow_updated_at: number;
   access_token: string;
   guest_username: string;
   guest_password_hash: string;
@@ -46,7 +49,8 @@ export async function getAlbumByToken(token: string) {
   return env.DB.prepare(
     `SELECT id, title, event_type, event_date, description, tagline, location, theme,
       expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
-      downloads_enabled, event_slug, cover_photo_id, access_token, guest_username,
+      downloads_enabled, event_slug, cover_photo_id, slideshow_playing,
+      slideshow_position, slideshow_updated_at, access_token, guest_username,
       guest_password_hash, created_at FROM albums WHERE access_token = ? LIMIT 1`,
   )
     .bind(token)
@@ -57,7 +61,8 @@ export async function getAlbumById(id: string) {
   return env.DB.prepare(
     `SELECT id, title, event_type, event_date, description, tagline, location, theme,
       expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
-      downloads_enabled, event_slug, cover_photo_id, access_token, guest_username,
+      downloads_enabled, event_slug, cover_photo_id, slideshow_playing,
+      slideshow_position, slideshow_updated_at, access_token, guest_username,
       guest_password_hash, created_at FROM albums WHERE id = ? LIMIT 1`,
   )
     .bind(id)
@@ -68,7 +73,8 @@ export async function getAlbumBySlug(slug: string) {
   return env.DB.prepare(
     `SELECT id, title, event_type, event_date, description, tagline, location, theme,
       expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
-      downloads_enabled, event_slug, cover_photo_id, access_token, guest_username,
+      downloads_enabled, event_slug, cover_photo_id, slideshow_playing,
+      slideshow_position, slideshow_updated_at, access_token, guest_username,
       guest_password_hash, created_at FROM albums WHERE event_slug = ? LIMIT 1`,
   )
     .bind(slug)

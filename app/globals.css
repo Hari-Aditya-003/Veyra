@@ -217,7 +217,20 @@ img, video { max-width: 100%; }
 .status-pill { padding: .52rem .72rem; border-radius: 99px; font-size: .72rem; font-weight: 900; text-transform: capitalize; }
 .status-pill.draft { color: #8b5e16; background: #fff4cc; }
 .status-pill.live { color: #087b46; background: #dff7ea; }
+.status-pill.paused { color: #8b5e16; background: #fff0bd; }
 .status-pill.completed { color: #685f72; background: #eeeaf1; }
+.live-control-card { overflow: hidden; }
+.live-control-state { display: flex; align-items: center; gap: .8rem; margin-top: 1rem; padding: .9rem; border: 1px solid #f0d9e8; border-radius: 1rem; background: #fff8fc; }
+.live-control-state > span { width: 2.7rem; height: 2.7rem; display: grid; place-items: center; border-radius: .8rem; color: #fff; background: linear-gradient(135deg,#ff4fa3,#8b5cf6); box-shadow: 0 10px 24px rgba(196,55,139,.2); }
+.live-control-state > span svg { width: 1.1rem; }
+.live-control-state div { display: grid; gap: .1rem; }
+.live-control-state strong { color: #4d163f; }
+.live-control-state small { color: #8b6c82; }
+.live-control-state.paused > span { background: linear-gradient(135deg,#f59e0b,#ff7a45); }
+.live-control-actions { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: .55rem; margin-top: .75rem; }
+.live-control-actions button { min-height: 2.75rem; display: flex; align-items: center; justify-content: center; gap: .35rem; border: 1px solid #ecd7e6; border-radius: .8rem; color: #6b315b; background: #fff; font-weight: 800; cursor: pointer; }
+.live-control-actions button svg { width: 1rem; }
+.live-control-actions .primary-live-control { border: 0; color: #fff; background: linear-gradient(135deg,#ff4fa3,#8b5cf6); }
 .qr-tabs { margin-top: .9rem; padding: .25rem; display: grid; grid-template-columns: repeat(3,1fr); gap: .2rem; border-radius: .75rem; background: #fff0f7; }
 .qr-tabs button { padding: .5rem; border: 0; border-radius: .55rem; color: #8b6a82; background: transparent; font-size: .72rem; font-weight: 800; cursor: pointer; }
 .qr-tabs button.active { color: #a31964; background: #fff; box-shadow: 0 4px 14px rgba(174,49,113,.1); }

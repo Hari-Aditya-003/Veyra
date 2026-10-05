@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { LockKeyhole, QrCode, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GalleryView } from "@/components/veyra/gallery-view";
 import { getAlbumByToken, type PhotoRecord } from "@/lib/data";
@@ -18,8 +19,8 @@ export default async function GalleryPage({ params, searchParams }: { params: Pr
     return (
       <main className="guest-access-shell">
         <div className="emoji-sky guest-emojis" aria-hidden="true"><span>✨</span><span>📸</span><span>🌸</span></div>
-        <header className="guest-access-header"><a href="/"><img src="/snap-hub-logo.png" alt="Snap HUB" /></a><span>Event preview</span></header>
-        <section className="guest-access-card event-paused-card"><div className="guest-event-icon">⏳</div><p className="pink-eyebrow">{album.event_type}</p><h1>{album.title}</h1><p>This event gallery is being prepared by the host. Please scan the QR again when the event is live.</p></section>
+        <header className="guest-access-header"><Link href="/"><img src="/snap-hub-logo.png" alt="Snap HUB" /></Link><span>Event preview</span></header>
+        <section className="guest-access-card event-paused-card"><div className="guest-event-icon">{album.status === "paused" ? "⏸️" : "⏳"}</div><p className="pink-eyebrow">{album.event_type}</p><h1>{album.title}</h1><p>{album.status === "paused" ? "The host has paused this event. Your QR will work again as soon as the host resumes it." : "This event gallery is being prepared by the host. Please scan the QR again when the event is live."}</p></section>
       </main>
     );
   }
@@ -30,7 +31,7 @@ export default async function GalleryPage({ params, searchParams }: { params: Pr
       <main className="guest-access-shell">
         <div className="emoji-sky guest-emojis" aria-hidden="true"><span>🎉</span><span>✨</span><span>🌸</span><span>📸</span><span>🪩</span></div>
         <header className="guest-access-header">
-          <a href="/" aria-label="Snap HUB home">{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/snap-hub-logo.png" alt="Snap HUB" /></a>
+          <Link href="/" aria-label="Snap HUB home"><img src="/snap-hub-logo.png" alt="Snap HUB" /></Link>
           <span><QrCode /> Private event</span>
         </header>
         <section className="guest-access-card">

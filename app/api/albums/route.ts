@@ -8,7 +8,8 @@ export async function GET() {
     `SELECT a.id, a.title, a.event_type, a.event_date, a.description, a.tagline,
       a.location, a.theme, a.expected_guests, a.status, a.access_mode,
       a.allow_guest_uploads, a.moderation_mode, a.downloads_enabled,
-      a.event_slug, a.cover_photo_id, a.access_token, a.guest_username, a.created_at,
+      a.event_slug, a.cover_photo_id, a.slideshow_playing, a.slideshow_position,
+      a.slideshow_updated_at, a.access_token, a.guest_username, a.created_at,
       COUNT(p.id) AS media_count, COALESCE(SUM(p.size), 0) AS storage_bytes
      FROM albums a LEFT JOIN photos p ON p.album_id = a.id
      GROUP BY a.id ORDER BY a.created_at DESC`,
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       location, theme: "rose", expected_guests: expectedGuests, status: "draft",
       access_mode: "password", allow_guest_uploads: 0, moderation_mode: "manual",
       downloads_enabled: 1, event_slug: eventSlug, cover_photo_id: null,
+      slideshow_playing: 1, slideshow_position: 0, slideshow_updated_at: 0,
       access_token: accessToken, guest_username: guestUsername, guest_password: guestPassword,
       created_at: createdAt, media_count: 0, storage_bytes: 0,
     },

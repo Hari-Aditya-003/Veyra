@@ -16,6 +16,11 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
      ORDER BY p.created_at DESC`,
   ).bind(album.id).all<PhotoRecord>();
   return NextResponse.json({
+    slideshow: {
+      playing: Boolean(album.slideshow_playing),
+      position: album.slideshow_position,
+      updatedAt: album.slideshow_updated_at,
+    },
     media: result.results.map((item) => ({
       id: item.id, filename: item.filename, contentType: item.content_type,
       caption: item.caption, isFeatured: Boolean(item.is_featured),

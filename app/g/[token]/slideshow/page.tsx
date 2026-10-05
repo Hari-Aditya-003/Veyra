@@ -20,6 +20,11 @@ export default async function SlideshowPage({ params }: { params: Promise<{ toke
   return <LiveSlideshow
     title={album.title}
     token={token}
+    initialControl={{
+      playing: Boolean(album.slideshow_playing),
+      position: album.slideshow_position,
+      updatedAt: album.slideshow_updated_at,
+    }}
     initialMedia={result.results.map((item) => ({
       id: item.id, filename: item.filename, contentType: item.content_type,
       caption: item.caption, isFeatured: Boolean(item.is_featured),

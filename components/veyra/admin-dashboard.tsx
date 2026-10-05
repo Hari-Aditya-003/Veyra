@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import Link from "next/link";
 import {
-  CalendarDays, Check, CircleCheck, Clock3, Copy, Download, ExternalLink, Film,
+  CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, Copy, Download, ExternalLink, Film,
   FolderPlus, ImagePlus, Link2, LogOut, MapPin, Palette, Play, Plus, QrCode,
-  Save, Settings2, Sparkles, Star, Trash2, Upload, Users, Wallpaper, X,
+  Pause, Save, Settings2, Sparkles, Star, Trash2, Upload, Users, Wallpaper, X,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import {
@@ -16,9 +17,10 @@ import {
 type Album = {
   id: string; title: string; event_type: string; event_date: string; description: string;
   tagline: string; location: string; theme: string; expected_guests: number;
-  status: "draft" | "live" | "completed"; access_mode: "password" | "link";
+  status: "draft" | "live" | "paused" | "completed"; access_mode: "password" | "link";
   allow_guest_uploads: number; moderation_mode: "manual" | "instant"; downloads_enabled: number;
   event_slug: string | null; cover_photo_id: string | null; access_token: string;
+  slideshow_playing: number; slideshow_position: number; slideshow_updated_at: number;
   guest_username: string; guest_password?: string; created_at: number; media_count: number; storage_bytes: number;
 };
 type Media = {
@@ -50,7 +52,7 @@ export function AdminDashboard() {
   const [media, setMedia] = useState<Media[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [origin, setOrigin] = useState("");
+  const [origin] = useState(() => typeof window === "undefined" ? "" : window.location.origin);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrMode, setQrMode] = useState<QrMode>("gallery");
   const [busy, setBusy] = useState(false);
@@ -75,7 +77,7 @@ export function AdminDashboard() {
     setSelectedId((current) => current ?? data.albums[0]?.id ?? null);
   }, []);
 
-  useEffect(() => { setOrigin(window.location.origin); void load(); }, [load]);
+  useEffect(() => { void Promise.resolve().then(load); }, [load]);
   useEffect(() => {
     const context = document.modelContext;
     if (!context?.registerTool) return;
@@ -123,7 +125,10 @@ export function AdminDashboard() {
   const slideshowUrl = selected && origin ? `${origin}/g/${selected.access_token}/slideshow` : "";
   const qrTarget = qrMode === "upload" ? uploadUrl : qrMode === "slideshow" ? slideshowUrl : shareUrl;
   useEffect(() => {
-    if (!qrTarget) return setQrDataUrl("");
+    if (!qrTarget) {
+      void Promise.resolve().then(() => setQrDataUrl(""));
+      return;
+    }
     void QRCode.toDataURL(qrTarget, { width: 360, margin: 1, color: { dark: "#5a1749", light: "#fff8fc" } }).then(setQrDataUrl);
   }, [qrTarget]);
 
@@ -177,6 +182,20 @@ export function AdminDashboard() {
     toast.success(patch.moderationStatus === "approved" ? "Memory approved" : patch.moderationStatus === "rejected" ? "Memory hidden" : patch.isFeatured !== undefined ? (patch.isFeatured ? "Added to highlights" : "Removed from highlights") : "Caption saved");
   }
   async function setCover(item: Media) { if (!selected) return; await saveEvent({ cover_photo_id: item.id }); }
+  async function controlSlideshow(action: "play" | "pause" | "next" | "previous" | "restart") {
+    if (!selected) return;
+    const response = await fetch(`/api/albums/${selected.id}/slideshow`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }),
+    });
+    const data = await response.json();
+    if (!response.ok) return toast.error(data.error ?? "Could not update the live slideshow");
+    updateSelected({
+      slideshow_playing: Number(data.playing),
+      slideshow_position: data.position,
+      slideshow_updated_at: data.updatedAt,
+    });
+    toast.success(action === "pause" ? "Slideshow paused on every screen" : action === "play" ? "Slideshow resumed" : "Live screen updated");
+  }
   async function removeMedia(id: string) {
     const response = await fetch(`/api/photos/${id}`, { method: "DELETE" });
     if (!response.ok) return toast.error("Could not delete this memory");
@@ -192,7 +211,7 @@ export function AdminDashboard() {
     <main className="hub-shell">
       <Toaster richColors position="top-right" />
       <aside className="hub-sidebar">
-        <a className="hub-logo" href="/" aria-label="Snap HUB home"><img src="/snap-hub-logo.png" alt="Snap HUB" /></a>
+        <Link className="hub-logo" href="/" aria-label="Snap HUB home"><img src="/snap-hub-logo.png" alt="Snap HUB" /></Link>
         <div className="side-label">Your events <span>{albums.length}</span></div>
         <nav className="event-nav">{albums.map((album) => <button key={album.id} className={selected?.id === album.id ? "active" : ""} onClick={() => setSelectedId(album.id)}><span className="event-emoji">{album.event_type === "Wedding" ? "💍" : album.event_type === "Birthday" ? "🎂" : album.event_type === "Corporate" ? "🏢" : "🎉"}</span><span><strong>{album.title}</strong><small>{album.status} · {album.media_count} memories</small></span></button>)}{!albums.length && <p className="side-empty">Your first event will appear here.</p>}</nav>
         <form action="/api/admin/logout" method="post"><button className="hub-logout"><LogOut size={17} /> Sign out</button></form>
@@ -209,7 +228,7 @@ export function AdminDashboard() {
         </section>
 
         <div className="hub-content-grid">
-          <section className="hub-card new-event-card">
+          <section className="hub-card new-event-card" id="events">
             <div className="hub-card-title"><span><Plus /></span><div><h2>Create an event</h2><p>Start with the essentials. New events stay private until you publish.</p></div></div>
             <form className="event-create-form" onSubmit={createAlbum}>
               <label>Event name<input name="title" required placeholder="e.g. Aditya’s 30th Birthday" /></label>
@@ -238,10 +257,24 @@ export function AdminDashboard() {
             <button className="save-button" onClick={() => void saveEvent()}><Save /> Save design</button>
           </section>}
 
-          {selected && <section className="hub-card settings-card">
+          {selected && <section className="hub-card live-control-card" id="live-controls">
+            <div className="hub-card-title"><span><Play /></span><div><h2>Live slideshow control</h2><p>Control every open event screen from the web dashboard or iOS app.</p></div></div>
+            <div className={`live-control-state ${selected.slideshow_playing ? "playing" : "paused"}`}>
+              <span>{selected.slideshow_playing ? <Play /> : <Pause />}</span>
+              <div><strong>{selected.slideshow_playing ? "Playing live" : "Paused"}</strong><small>Slide {selected.slideshow_position + 1} · updates in seconds</small></div>
+            </div>
+            <div className="live-control-actions">
+              <button onClick={() => void controlSlideshow("previous")} aria-label="Previous slide"><ChevronLeft /> Previous</button>
+              <button className="primary-live-control" onClick={() => void controlSlideshow(selected.slideshow_playing ? "pause" : "play")}>{selected.slideshow_playing ? <><Pause /> Pause</> : <><Play /> Resume</>}</button>
+              <button onClick={() => void controlSlideshow("next")} aria-label="Next slide">Next <ChevronRight /></button>
+            </div>
+            <div className="card-actions"><a href={slideshowUrl} target="_blank" rel="noreferrer"><ExternalLink /> Open live screen</a><button onClick={() => void controlSlideshow("restart")}><Play /> Restart show</button></div>
+          </section>}
+
+          {selected && <section className="hub-card settings-card" id="settings">
             <div className="hub-card-title"><span><Settings2 /></span><div><h2>Access &amp; permissions</h2><p>Control when guests enter and what they can do.</p></div></div>
             <div className="settings-grid">
-              <label>Event status<select value={selected.status} onChange={(event) => updateSelected({ status: event.target.value as Album["status"] })}><option value="draft">Draft</option><option value="live">Live</option><option value="completed">Completed</option></select></label>
+              <label>Event status<select value={selected.status} onChange={(event) => updateSelected({ status: event.target.value as Album["status"] })}><option value="draft">Draft</option><option value="live">Live</option><option value="paused">Paused</option><option value="completed">Completed</option></select></label>
               <label>Guest access<select value={selected.access_mode} onChange={(event) => updateSelected({ access_mode: event.target.value as Album["access_mode"] })}><option value="password">QR + password</option><option value="link">QR or private link</option></select></label>
               <label>Guest moderation<select value={selected.moderation_mode} onChange={(event) => updateSelected({ moderation_mode: event.target.value as Album["moderation_mode"] })}><option value="manual">Host approves first</option><option value="instant">Publish instantly</option></select></label>
             </div>
@@ -249,7 +282,7 @@ export function AdminDashboard() {
             <button className="save-button publish-button" onClick={() => void saveEvent()}>{selected.status === "live" ? <><CircleCheck /> Save live event</> : <><Save /> Save permissions</>}</button>
           </section>}
 
-          {selected && <section className="hub-card upload-card-new">
+          {selected && <section className="hub-card upload-card-new" id="uploads">
             <div className="hub-card-title"><span><Upload /></span><div><h2>Add memories</h2><p>Upload photos and videos into a named album.</p></div></div>
             <form onSubmit={upload} className="media-upload-form expanded-upload">
               <div className="upload-meta"><select name="collectionId">{selectedCollections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}</select><input name="caption" placeholder="Optional caption for this upload" /></div>
