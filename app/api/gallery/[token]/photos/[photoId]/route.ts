@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { recordEventMetric } from "@/lib/analytics";
 import { getAlbumByToken, getPhoto } from "@/lib/data";
 import { canViewGallery } from "@/lib/security";
 
@@ -12,6 +13,7 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
   if (!object) return new Response("Not found", { status: 404 });
   const download = new URL(request.url).searchParams.get("download") === "1";
   if (download && !album.downloads_enabled) return new Response("Downloads are disabled for this event", { status: 403 });
+  if (download) await recordEventMetric(album.id, "downloads");
   return new Response(object.body, {
     headers: {
       "Content-Type": photo.content_type,

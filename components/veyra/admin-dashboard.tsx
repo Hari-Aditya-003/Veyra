@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import Link from "next/link";
 import {
-  CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, Copy, Download, ExternalLink, Film,
+  BarChart3, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, Copy, Download, ExternalLink, Eye, Film,
   FolderPlus, ImagePlus, KeyRound, Link2, LogOut, MapPin, Palette, Play, Plus, QrCode,
   Pause, Save, Settings2, Sparkles, Star, Trash2, Upload, Users, Wallpaper, X,
 } from "lucide-react";
@@ -22,6 +22,7 @@ type Album = {
   event_slug: string | null; cover_photo_id: string | null; access_token: string;
   slideshow_playing: number; slideshow_position: number; slideshow_updated_at: number;
   guest_username: string; guest_password?: string; created_at: number; media_count: number; storage_bytes: number;
+  gallery_views: number; downloads: number; guest_uploads: number; last_view_at: number;
 };
 type Media = {
   id: string; album_id: string; filename: string; content_type: string; caption: string;
@@ -319,6 +320,8 @@ export function AdminDashboard() {
           </section>}
 
           {selected && <section className="hub-card storage-card"><div className="hub-card-title"><span><Link2 /></span><div><h2>Storage connection</h2><p>Snap HUB cloud storage is active for this testing release.</p></div></div><div className="storage-health"><span><Check /> Connected</span><strong>{formatBytes(selected.storage_bytes)} · {selected.media_count} files</strong></div><div className="future-integration"><Sparkles /><span><strong>Google Photos connection</strong><small>Reserved for the OAuth integration phase; no placeholder account is connected.</small></span></div></section>}
+
+          {selected && <section className="hub-card activity-card"><div className="hub-card-title"><span><BarChart3 /></span><div><h2>Event activity</h2><p>Live guest engagement recorded for this event.</p></div></div><div className="activity-grid"><div><Eye /><span><strong>{Number(selected.gallery_views).toLocaleString()}</strong><small>Gallery views</small></span></div><div><Download /><span><strong>{Number(selected.downloads).toLocaleString()}</strong><small>Downloads</small></span></div><div><Upload /><span><strong>{Number(selected.guest_uploads).toLocaleString()}</strong><small>Guest uploads</small></span></div></div><small className="activity-note">{Number(selected.last_view_at) > 0 ? `Last guest view ${new Date(Number(selected.last_view_at)).toLocaleString()}` : "Share the gallery QR to begin tracking guest activity."}</small></section>}
         </div>
 
         {selected && <section className="memories-section">

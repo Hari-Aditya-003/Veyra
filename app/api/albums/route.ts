@@ -10,8 +10,14 @@ export async function GET() {
       a.allow_guest_uploads, a.moderation_mode, a.downloads_enabled,
       a.event_slug, a.cover_photo_id, a.slideshow_playing, a.slideshow_position,
       a.slideshow_updated_at, a.access_token, a.guest_username, a.created_at,
-      COUNT(p.id) AS media_count, COALESCE(SUM(p.size), 0) AS storage_bytes
-     FROM albums a LEFT JOIN photos p ON p.album_id = a.id
+      COUNT(p.id) AS media_count, COALESCE(SUM(p.size), 0) AS storage_bytes,
+      COALESCE(MAX(m.gallery_views), 0) AS gallery_views,
+      COALESCE(MAX(m.downloads), 0) AS downloads,
+      COALESCE(MAX(m.guest_uploads), 0) AS guest_uploads,
+      COALESCE(MAX(m.last_view_at), 0) AS last_view_at
+     FROM albums a
+     LEFT JOIN photos p ON p.album_id = a.id
+     LEFT JOIN event_metrics m ON m.event_id = a.id
      GROUP BY a.id ORDER BY a.created_at DESC`,
   ).all();
   const photoResult = await env.DB.prepare(
@@ -61,6 +67,9 @@ export async function POST(request: Request) {
     env.DB.prepare(
       "INSERT INTO event_collections (id, album_id, name, description, created_at) VALUES (?, ?, 'Main moments', '', ?)",
     ).bind(collectionId, id, createdAt),
+    env.DB.prepare(
+      "INSERT INTO event_metrics (event_id, gallery_views, downloads, guest_uploads, last_view_at, last_download_at, last_guest_upload_at) VALUES (?, 0, 0, 0, 0, 0, 0)",
+    ).bind(id),
   ]);
 
   return NextResponse.json({
@@ -72,6 +81,7 @@ export async function POST(request: Request) {
       slideshow_playing: 1, slideshow_position: 0, slideshow_updated_at: 0,
       access_token: accessToken, guest_username: guestUsername, guest_password: guestPassword,
       created_at: createdAt, media_count: 0, storage_bytes: 0,
+      gallery_views: 0, downloads: 0, guest_uploads: 0, last_view_at: 0,
     },
     collection: { id: collectionId, album_id: id, name: "Main moments", description: "", created_at: createdAt },
   });

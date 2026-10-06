@@ -69,3 +69,15 @@ export const photos = sqliteTable(
     index("photos_collection_idx").on(table.collectionId),
   ],
 );
+
+export const eventMetrics = sqliteTable("event_metrics", {
+  eventId: text("event_id")
+    .primaryKey()
+    .references(() => albums.id, { onDelete: "cascade" }),
+  galleryViews: integer("gallery_views").notNull().default(0),
+  downloads: integer("downloads").notNull().default(0),
+  guestUploads: integer("guest_uploads").notNull().default(0),
+  lastViewAt: integer("last_view_at").notNull().default(0),
+  lastDownloadAt: integer("last_download_at").notNull().default(0),
+  lastGuestUploadAt: integer("last_guest_upload_at").notNull().default(0),
+});

@@ -3,6 +3,7 @@ import { LockKeyhole, QrCode, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GalleryView } from "@/components/veyra/gallery-view";
+import { recordEventMetric } from "@/lib/analytics";
 import { getAlbumByToken, type PhotoRecord } from "@/lib/data";
 import { canViewGallery, isAdmin } from "@/lib/security";
 
@@ -51,6 +52,8 @@ export default async function GalleryPage({ params, searchParams }: { params: Pr
       </main>
     );
   }
+
+  if (!adminPreview) await recordEventMetric(album.id, "gallery_views");
 
   const result = await env.DB.prepare(
     `SELECT p.id, p.album_id, p.object_key, p.filename, p.content_type, p.caption,

@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
+import { recordEventMetric } from "@/lib/analytics";
 import { getAlbumByToken } from "@/lib/data";
 import { canViewGallery } from "@/lib/security";
 import { isRateLimited } from "@/lib/rate-limit";
@@ -52,5 +53,6 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     created.push({ id: photoId, filename: file.name, moderationStatus });
   }
   if (!created.length) return NextResponse.json({ error: "Files must be photos or videos under 75 MB" }, { status: 400 });
+  await recordEventMetric(album.id, "guest_uploads", created.length);
   return NextResponse.json({ photos: created, moderationStatus });
 }
