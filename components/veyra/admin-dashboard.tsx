@@ -208,8 +208,9 @@ export function AdminDashboard() {
   function copy(value: string, label: string) { void navigator.clipboard.writeText(value); toast.success(`${label} copied`); }
 
   return (
-    <main className="hub-shell">
+    <>
       <Toaster richColors position="top-right" />
+      <main className="hub-shell">
       <aside className="hub-sidebar">
         <Link className="hub-logo" href="/" aria-label="Snap HUB home"><img src="/snap-hub-logo.png" alt="Snap HUB" /></Link>
         <div className="side-label">Your events <span>{albums.length}</span></div>
@@ -309,6 +310,7 @@ export function AdminDashboard() {
           </div>
         </section>}
       </section>
-    </main>
+      </main>
+    </>
   );
 }
