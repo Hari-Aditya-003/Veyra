@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import Link from "next/link";
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, Copy, Download, ExternalLink, Film,
-  FolderPlus, ImagePlus, Link2, LogOut, MapPin, Palette, Play, Plus, QrCode,
+  FolderPlus, ImagePlus, KeyRound, Link2, LogOut, MapPin, Palette, Play, Plus, QrCode,
   Pause, Save, Settings2, Sparkles, Star, Trash2, Upload, Users, Wallpaper, X,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
@@ -196,6 +196,16 @@ export function AdminDashboard() {
     });
     toast.success(action === "pause" ? "Slideshow paused on every screen" : action === "play" ? "Slideshow resumed" : "Live screen updated");
   }
+  async function rotateGuestCredentials() {
+    if (!selected) return;
+    setBusy(true);
+    const response = await fetch(`/api/albums/${selected.id}/credentials`, { method: "POST" });
+    const data = await response.json();
+    setBusy(false);
+    if (!response.ok) return toast.error(data.error ?? "Could not generate a new guest login");
+    updateSelected({ guest_username: data.guestUsername, guest_password: data.guestPassword });
+    toast.success("New guest ID and password generated — save them now");
+  }
   async function removeMedia(id: string) {
     const response = await fetch(`/api/photos/${id}`, { method: "DELETE" });
     if (!response.ok) return toast.error("Could not delete this memory");
@@ -245,7 +255,7 @@ export function AdminDashboard() {
             <div className="hub-card-title"><span><QrCode /></span><div><h2>Share &amp; QR centre</h2><p>Make a QR for the gallery, guest uploads, or the live screen.</p></div></div>
             <div className="qr-tabs"><button className={qrMode === "gallery" ? "active" : ""} onClick={() => setQrMode("gallery")}>Gallery</button><button className={qrMode === "upload" ? "active" : ""} onClick={() => setQrMode("upload")}>Upload</button><button className={qrMode === "slideshow" ? "active" : ""} onClick={() => setQrMode("slideshow")}>Slideshow</button></div>
             <div className="qr-share-layout">{qrDataUrl && <div className="qr-box"><img src={qrDataUrl} alt={`QR code for ${selected.title}`} /></div>}<div className="share-details"><button onClick={() => copy(qrTarget, "Share link")}><small>{qrMode} link</small><strong>{qrTarget}</strong><Copy /></button>{selected.access_mode === "password" && <button onClick={() => copy(selected.guest_username, "Guest ID")}><small>Guest ID</small><strong>{selected.guest_username}</strong><Copy /></button>}{selected.guest_password && <button className="password-row" onClick={() => copy(selected.guest_password!, "Password")}><small>New password · save now</small><strong>{selected.guest_password}</strong><Copy /></button>}</div></div>
-            <div className="card-actions"><a href={qrTarget} target="_blank" rel="noreferrer"><ExternalLink /> Open {qrMode}</a>{qrDataUrl && <a href={qrDataUrl} download={`${selected.event_slug ?? "snap-hub"}-${qrMode}-qr.png`}><Download /> Download QR</a>}</div>
+            <div className="card-actions"><a href={qrTarget} target="_blank" rel="noreferrer"><ExternalLink /> Open {qrMode}</a>{qrDataUrl && <a href={qrDataUrl} download={`${selected.event_slug ?? "snap-hub"}-${qrMode}-qr.png`}><Download /> Download QR</a>}{selected.access_mode === "password" && <button onClick={() => void rotateGuestCredentials()} disabled={busy}><KeyRound /> New guest login</button>}</div>
             {selected.status !== "live" && <div className="draft-warning"><Clock3 /> Guests see a waiting screen until this event is published.</div>}
           </section>}
 
