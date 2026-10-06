@@ -50,3 +50,26 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     cover_photo_id: coverPhotoId,
   });
 }
+
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await context.params;
+  const album = await getAlbumById(id);
+  if (!album) return NextResponse.json({ error: "Event not found" }, { status: 404 });
+
+  const media = await env.DB.prepare("SELECT object_key FROM photos WHERE album_id = ?").bind(id).all<{ object_key: string }>();
+  const objectKeys = media.results.map((item) => item.object_key);
+  for (let offset = 0; offset < objectKeys.length; offset += 1000) {
+    await env.BUCKET.delete(objectKeys.slice(offset, offset + 1000));
+  }
+
+  await env.DB.batch([
+    env.DB.prepare("UPDATE albums SET cover_photo_id = NULL WHERE id = ?").bind(id),
+    env.DB.prepare("DELETE FROM photos WHERE album_id = ?").bind(id),
+    env.DB.prepare("DELETE FROM event_collections WHERE album_id = ?").bind(id),
+    env.DB.prepare("DELETE FROM albums WHERE id = ?").bind(id),
+  ]);
+
+  return NextResponse.json({ ok: true, deletedMedia: objectKeys.length });
+}

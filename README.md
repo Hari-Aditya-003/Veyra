@@ -24,6 +24,7 @@ Host credentials are configured as deployment secrets and are never committed to
 - Guest uploads with manual or instant moderation
 - Favorites, highlights, search, photo/video filters, and original downloads
 - Event status controls for draft, live, paused, and completed events
+- Owner-only event deletion that removes database records and stored media objects
 - Host-controlled live slideshow with previous, next, pause, resume, and restart
 - Responsive guest and host web experiences with installable PWA metadata
 - Native SwiftUI iPhone/iPad host shell connected to the production workspace

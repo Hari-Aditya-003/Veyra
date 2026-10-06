@@ -211,6 +211,19 @@ export function AdminDashboard() {
     if (!response.ok) return toast.error("Could not delete this memory");
     setMedia((current) => current.filter((item) => item.id !== id)); toast.success("Memory deleted");
   }
+  async function removeEvent() {
+    if (!selected) return;
+    setBusy(true);
+    const response = await fetch(`/api/albums/${selected.id}`, { method: "DELETE" });
+    const data = await response.json();
+    setBusy(false);
+    if (!response.ok) return toast.error(data.error ?? "Could not delete this event");
+    setAlbums((current) => current.filter((album) => album.id !== selected.id));
+    setMedia((current) => current.filter((item) => item.album_id !== selected.id));
+    setCollections((current) => current.filter((item) => item.album_id !== selected.id));
+    setSelectedId(null);
+    toast.success(`Event deleted with ${data.deletedMedia} stored ${data.deletedMedia === 1 ? "memory" : "memories"}`);
+  }
   function updateSelected(patch: Partial<Album>) {
     if (!selected) return;
     setAlbums((current) => current.map((album) => album.id === selected.id ? { ...album, ...patch } : album));
@@ -291,6 +304,7 @@ export function AdminDashboard() {
             </div>
             <div className="permission-list"><label><input type="checkbox" checked={Boolean(selected.allow_guest_uploads)} onChange={(event) => updateSelected({ allow_guest_uploads: Number(event.target.checked) })} /><span><strong>Allow guest uploads</strong><small>Guests can add photos and videos from their browser.</small></span></label><label><input type="checkbox" checked={Boolean(selected.downloads_enabled)} onChange={(event) => updateSelected({ downloads_enabled: Number(event.target.checked) })} /><span><strong>Allow downloads</strong><small>Guests can save original event media.</small></span></label></div>
             <button className="save-button publish-button" onClick={() => void saveEvent()}>{selected.status === "live" ? <><CircleCheck /> Save live event</> : <><Save /> Save permissions</>}</button>
+            <div className="event-danger-zone"><div><strong>Delete event</strong><small>Remove this event, its guest links, albums, photos, and videos.</small></div><AlertDialog><AlertDialogTrigger asChild><button disabled={busy}><Trash2 /> Delete event</button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selected.title}?</AlertDialogTitle><AlertDialogDescription>This permanently removes the event and every stored photo and video. Shared QR codes and guest links will stop working.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep event</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => void removeEvent()}>Delete event permanently</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>
           </section>}
 
           {selected && <section className="hub-card upload-card-new" id="uploads">
