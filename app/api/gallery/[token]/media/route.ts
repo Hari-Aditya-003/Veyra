@@ -13,7 +13,7 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
       p.uploader_name, p.source, p.size, p.created_at
      FROM photos p LEFT JOIN event_collections c ON c.id = p.collection_id
      WHERE p.album_id = ? AND p.moderation_status = 'approved'
-     ORDER BY p.created_at DESC`,
+     ORDER BY p.is_featured DESC, p.created_at DESC`,
   ).bind(album.id).all<PhotoRecord>();
   return NextResponse.json({
     slideshow: {

@@ -26,7 +26,7 @@ Host credentials are configured as deployment secrets and are never committed to
 - Event status controls for draft, live, paused, and completed events
 - Owner-only event deletion that removes database records and stored media objects
 - Database-backed event activity for gallery views, guest uploads, and downloads
-- Host-controlled live slideshow with previous, next, pause, resume, and restart
+- Host-controlled live slideshow with previous, next, pause, resume, restart, and ambient music
 - Responsive guest and host web experiences with installable PWA metadata
 - Native SwiftUI iPhone/iPad host shell connected to the production workspace
 
@@ -37,6 +37,8 @@ Host credentials are configured as deployment secrets and are never committed to
 - D1 for event and media metadata
 - R2 for original photo and video objects
 - SwiftUI and `WKWebView` for the signed iOS host app
+
+Google Drive and Google Photos are not connected in the testing build. Snap HUB currently stores uploads directly in its private R2 object storage. A Google connection requires a separate OAuth consent screen and Google API credentials before it can be enabled safely.
 
 ## Local web development
 

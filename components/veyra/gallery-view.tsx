@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft, ChevronRight, Download, Film, Heart, Image as ImageIcon,
-  ImageUp, MapPin, Maximize2, Play, Search, Sparkles, Star, Upload, X,
+  ImageUp, Maximize2, Play, Search, Sparkles, Star, Upload, X,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import Link from "next/link";
@@ -14,8 +14,8 @@ type GalleryMedia = {
 };
 type GalleryViewProps = {
   album: {
-    title: string; eventType: string; eventDate: string; description: string; tagline: string;
-    location: string; theme: string; coverPhotoId: string | null; allowGuestUploads: boolean;
+    title: string; eventType: string; description: string; tagline: string;
+    theme: string; coverPhotoId: string | null; allowGuestUploads: boolean;
     downloadsEnabled: boolean; moderationMode: string;
   };
   token: string;
@@ -100,13 +100,12 @@ export function GalleryView({ album, token, media: initialMedia, collections }: 
       </header>
 
       <section className={`memory-intro${album.coverPhotoId ? " has-cover" : ""}`}>
-        {album.coverPhotoId && <img className="event-cover" src={`/api/gallery/${token}/photos/${album.coverPhotoId}`} alt="" />}
+        {album.coverPhotoId && <img className="event-cover" src={`/api/gallery/${token}/photos/${album.coverPhotoId}`} alt="" decoding="async" fetchPriority="high" />}
         <div className="memory-intro-copy">
           <p className="gallery-kicker">{album.eventType} · Private gallery</p>
           <h1>{album.title}</h1>
           {album.tagline && <strong className="event-tagline">{album.tagline}</strong>}
           {album.description && <p>{album.description}</p>}
-          <div className="event-meta">{album.eventDate && <time>{new Date(`${album.eventDate}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</time>}{album.location && <span><MapPin /> {album.location}</span>}</div>
         </div>
       </section>
 
@@ -138,7 +137,7 @@ export function GalleryView({ album, token, media: initialMedia, collections }: 
           const isVideo = item.contentType.startsWith("video/");
           return <article key={item.id} className="memory-card">
             <button className="memory-open" onClick={() => setViewerIndex(index)} aria-label={`Open ${item.filename}`}>
-              {isVideo ? <video src={src(item)} preload="metadata" muted /> : <img src={src(item)} alt={item.caption || item.filename} />}
+              {isVideo ? <video src={src(item)} preload="metadata" muted playsInline /> : <img src={src(item)} alt={item.caption || item.filename} loading="lazy" decoding="async" />}
               <span className="expand-chip"><Maximize2 /> View</span>
               {isVideo && <span className="video-chip"><Play /> Video</span>}
               {item.isFeatured && <span className="highlight-chip"><Star /> Highlight</span>}
@@ -155,7 +154,7 @@ export function GalleryView({ album, token, media: initialMedia, collections }: 
         <button className="close-show" onClick={() => setViewerIndex(null)} aria-label="Close viewer"><X /></button>
         <button className="slide-nav prev" onClick={() => move(-1)} aria-label="Previous memory"><ChevronLeft /></button>
         <div className="slide-stage">
-          {active.contentType.startsWith("video/") ? <video key={active.id} src={src(active)} controls autoPlay /> : <img key={active.id} src={src(active)} alt={active.caption || active.filename} />}
+          {active.contentType.startsWith("video/") ? <video key={active.id} src={src(active)} controls autoPlay playsInline /> : <img key={active.id} src={src(active)} alt={active.caption || active.filename} decoding="async" />}
           <div className="slide-info"><div><strong>{active.caption || active.filename}</strong><span>{(viewerIndex ?? 0) + 1} of {filtered.length}</span></div><button onClick={() => toggleFavorite(active.id)}><Heart /> {favorites.has(active.id) ? "Saved" : "Save"}</button>{album.downloadsEnabled && <a href={`${src(active)}?download=1`}><Download /> Download</a>}</div>
         </div>
         <button className="slide-nav next" onClick={() => move(1)} aria-label="Next memory"><ChevronRight /></button>

@@ -1,16 +1,21 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getPhoto } from "@/lib/data";
+import { mediaResponse } from "@/lib/media-response";
 import { isAdmin } from "@/lib/security";
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return new Response("Unauthorized", { status: 401 });
   const { id } = await context.params;
   const photo = await getPhoto(id);
   if (!photo) return new Response("Not found", { status: 404 });
-  const object = await env.BUCKET.get(photo.object_key);
+  const object = await env.BUCKET.get(photo.object_key, request.headers.has("range") ? { range: request.headers } : undefined);
   if (!object) return new Response("Not found", { status: 404 });
-  return new Response(object.body, { headers: { "Content-Type": photo.content_type, "Cache-Control": "private, max-age=300" } });
+  return mediaResponse(object, request, {
+    contentType: photo.content_type,
+    filename: photo.filename,
+    cacheControl: "private, max-age=3600",
+  });
 }
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {

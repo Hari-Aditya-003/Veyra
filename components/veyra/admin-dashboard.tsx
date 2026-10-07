@@ -5,8 +5,8 @@ import QRCode from "qrcode";
 import Link from "next/link";
 import {
   BarChart3, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, Copy, Download, ExternalLink, Eye, Film,
-  FolderPlus, ImagePlus, KeyRound, Link2, LogOut, MapPin, Palette, Play, Plus, QrCode,
-  Pause, Save, Settings2, Sparkles, Star, Trash2, Upload, Users, Wallpaper, X,
+  FolderPlus, ImagePlus, KeyRound, Link2, LogOut, Palette, Play, Plus, QrCode,
+  Pause, Save, Settings2, Sparkles, Star, Trash2, Upload, Wallpaper, X,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import {
@@ -33,7 +33,7 @@ type Media = {
 type Collection = { id: string; album_id: string; name: string; description: string; created_at: number };
 type QrMode = "gallery" | "upload" | "slideshow";
 
-const eventTypes = ["Wedding", "Birthday", "Engagement", "Festival", "Graduation", "Corporate", "Concert", "Family gathering", "Other"];
+const eventTypes = ["Wedding", "Engagement", "Haldi", "Mehendi", "Sangeet", "Reception", "Birthday", "Anniversary", "Festival", "Graduation", "College event", "Corporate", "Conference", "Concert", "Party", "Reunion", "Trip", "Family gathering", "Photography event", "Other"];
 const themes = [
   { id: "rose", label: "Rose pop", color: "#ff4fa3" },
   { id: "sunset", label: "Sunset", color: "#ff7a45" },
@@ -66,7 +66,7 @@ export function AdminDashboard() {
   const totals = useMemo(() => ({
     media: albums.reduce((sum, album) => sum + Number(album.media_count), 0),
     storage: albums.reduce((sum, album) => sum + Number(album.storage_bytes), 0),
-    guests: albums.reduce((sum, album) => sum + Number(album.expected_guests), 0),
+    views: albums.reduce((sum, album) => sum + Number(album.gallery_views), 0),
   }), [albums]);
 
   const load = useCallback(async () => {
@@ -102,12 +102,10 @@ export function AdminDashboard() {
         inputSchema: {
           type: "object", properties: {
             title: { type: "string", minLength: 1 }, eventType: { type: "string" },
-            eventDate: { type: "string" }, location: { type: "string" },
-            expectedGuests: { type: "number", minimum: 0, maximum: 100000 },
           }, required: ["title"], additionalProperties: false,
         }, annotations: { readOnlyHint: false, untrustedContentHint: false },
         async execute(input) {
-          const value = input as { title?: string; eventType?: string; eventDate?: string; location?: string; expectedGuests?: number };
+          const value = input as { title?: string; eventType?: string };
           if (!value.title?.trim()) throw new Error("Event title is required");
           const response = await fetch("/api/albums", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) });
           const data = await response.json();
@@ -136,8 +134,7 @@ export function AdminDashboard() {
   async function createAlbum(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true);
     const response = await fetch("/api/albums", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      title: form.get("title"), eventType: form.get("eventType"), eventDate: form.get("eventDate"),
-      location: form.get("location"), tagline: form.get("tagline"), expectedGuests: Number(form.get("expectedGuests")),
+      title: form.get("title"), eventType: form.get("eventType"), tagline: form.get("tagline"),
     }) });
     const data = await response.json(); setBusy(false);
     if (!response.ok) return toast.error(data.error ?? "Could not create the event");
@@ -158,8 +155,8 @@ export function AdminDashboard() {
     if (!selected) return;
     const next = { ...selected, ...patch };
     const response = await fetch(`/api/albums/${selected.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      description: next.description, tagline: next.tagline, location: next.location, theme: next.theme,
-      expectedGuests: next.expected_guests, status: next.status, accessMode: next.access_mode,
+      description: next.description, tagline: next.tagline, theme: next.theme,
+      status: next.status, accessMode: next.access_mode,
       allowGuestUploads: Boolean(next.allow_guest_uploads), moderationMode: next.moderation_mode,
       downloadsEnabled: Boolean(next.downloads_enabled), coverPhotoId: next.cover_photo_id,
     }) });
@@ -248,7 +245,7 @@ export function AdminDashboard() {
         <section className="hub-stats" aria-label="Snap HUB summary">
           <div><span className="stat-icon pink"><CalendarDays /></span><p>Events</p><strong>{albums.length}</strong></div>
           <div><span className="stat-icon violet"><ImagePlus /></span><p>Memories</p><strong>{totals.media}</strong></div>
-          <div><span className="stat-icon blue"><Users /></span><p>Guest capacity</p><strong>{totals.guests.toLocaleString()}</strong></div>
+          <div><span className="stat-icon blue"><Eye /></span><p>Gallery views</p><strong>{totals.views.toLocaleString()}</strong></div>
           <div><span className="stat-icon orange"><Download /></span><p>Cloud storage</p><strong>{formatBytes(totals.storage)}</strong></div>
         </section>
 
@@ -257,10 +254,8 @@ export function AdminDashboard() {
             <div className="hub-card-title"><span><Plus /></span><div><h2>Create an event</h2><p>Start with the essentials. New events stay private until you publish.</p></div></div>
             <form className="event-create-form" onSubmit={createAlbum}>
               <label>Event name<input name="title" required placeholder="e.g. Aditya’s 30th Birthday" /></label>
-              <div className="form-pair"><label>Type<select name="eventType">{eventTypes.map((type) => <option key={type}>{type}</option>)}</select></label><label>Date<input name="eventDate" type="date" /></label></div>
-              <label>Location<input name="location" placeholder="Venue or city" /></label>
+              <label>Type<select name="eventType">{eventTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
               <label>Short tagline<input name="tagline" placeholder="The beginning of forever" /></label>
-              <label>Expected guests<input name="expectedGuests" type="number" min="0" placeholder="250" /></label>
               <button disabled={busy}>Create draft event</button>
             </form>
           </section>
@@ -276,7 +271,6 @@ export function AdminDashboard() {
           {selected && <section className="hub-card customize-card">
             <div className="hub-card-title"><span><Palette /></span><div><h2>Event look &amp; story</h2><p>Personalize the page guests see after scanning.</p></div></div>
             <label className="wide-label">Tagline<input value={selected.tagline} onChange={(event) => updateSelected({ tagline: event.target.value })} placeholder="A short event line" /></label>
-            <label className="wide-label"><MapPin /> Location<input value={selected.location} onChange={(event) => updateSelected({ location: event.target.value })} placeholder="Venue or city" /></label>
             <label className="wide-label">Welcome caption<textarea value={selected.description} onChange={(event) => updateSelected({ description: event.target.value })} placeholder="Write a warm note for everyone opening this gallery…" rows={3} /></label>
             <div className="theme-row">{themes.map((theme) => <button key={theme.id} className={selected.theme === theme.id ? "selected" : ""} onClick={() => updateSelected({ theme: theme.id })}><i style={{ background: theme.color }} />{theme.label}</button>)}</div>
             <button className="save-button" onClick={() => void saveEvent()}><Save /> Save design</button>
@@ -319,7 +313,7 @@ export function AdminDashboard() {
             <div className="collection-chips">{selectedCollections.map((collection) => <span key={collection.id}>{collection.name}</span>)}</div>
           </section>}
 
-          {selected && <section className="hub-card storage-card"><div className="hub-card-title"><span><Link2 /></span><div><h2>Storage connection</h2><p>Snap HUB cloud storage is active for this testing release.</p></div></div><div className="storage-health"><span><Check /> Connected</span><strong>{formatBytes(selected.storage_bytes)} · {selected.media_count} files</strong></div><div className="future-integration"><Sparkles /><span><strong>Google Photos connection</strong><small>Reserved for the OAuth integration phase; no placeholder account is connected.</small></span></div></section>}
+          {selected && <section className="hub-card storage-card"><div className="hub-card-title"><span><Link2 /></span><div><h2>Snap HUB storage</h2><p>Your event media is securely stored and ready for guests.</p></div></div><div className="storage-health"><span><Check /> Connected</span><strong>{formatBytes(selected.storage_bytes)} · {selected.media_count} files</strong></div></section>}
 
           {selected && <section className="hub-card activity-card"><div className="hub-card-title"><span><BarChart3 /></span><div><h2>Event activity</h2><p>Live guest engagement recorded for this event.</p></div></div><div className="activity-grid"><div><Eye /><span><strong>{Number(selected.gallery_views).toLocaleString()}</strong><small>Gallery views</small></span></div><div><Download /><span><strong>{Number(selected.downloads).toLocaleString()}</strong><small>Downloads</small></span></div><div><Upload /><span><strong>{Number(selected.guest_uploads).toLocaleString()}</strong><small>Guest uploads</small></span></div></div><small className="activity-note">{Number(selected.last_view_at) > 0 ? `Last guest view ${new Date(Number(selected.last_view_at)).toLocaleString()}` : "Share the gallery QR to begin tracking guest activity."}</small></section>}
         </div>
@@ -328,7 +322,7 @@ export function AdminDashboard() {
           <div className="memories-heading"><div><p className="pink-eyebrow">Event library</p><h2>{selectedMedia.length} memories</h2></div><div className="moderation-summary">{pendingCount > 0 ? <span><Clock3 /> {pendingCount} awaiting approval</span> : <span className="all-approved"><Check /> Moderation clear</span>}</div></div>
           <div className="host-media-grid">
             {selectedMedia.map((item) => { const isVideo = item.content_type.startsWith("video/"); return <article key={item.id} className={`host-media-card status-${item.moderation_status}`}>
-              <div className="media-preview">{isVideo ? <video src={`/api/photos/${item.id}`} controls preload="metadata" /> : <img src={`/api/photos/${item.id}`} alt={item.caption || item.filename} />}<span className="media-kind">{isVideo ? <><Film /> Video</> : <><ImagePlus /> Photo</>} · {item.collection_name ?? "Main gallery"}</span><span className={`moderation-badge ${item.moderation_status}`}>{item.moderation_status}</span><button className={item.is_featured ? "feature-button active" : "feature-button"} onClick={() => updateMedia(item, { isFeatured: !item.is_featured })} aria-label="Toggle highlight"><Star /></button></div>
+              <div className="media-preview">{isVideo ? <video src={`/api/photos/${item.id}`} controls preload="metadata" /> : <img src={`/api/photos/${item.id}`} alt={item.caption || item.filename} loading="lazy" decoding="async" />}<span className="media-kind">{isVideo ? <><Film /> Video</> : <><ImagePlus /> Photo</>} · {item.collection_name ?? "Main gallery"}</span><span className={`moderation-badge ${item.moderation_status}`}>{item.moderation_status}</span><button className={item.is_featured ? "feature-button active" : "feature-button"} onClick={() => updateMedia(item, { isFeatured: !item.is_featured })} aria-label="Toggle highlight"><Star /></button></div>
               <div className="uploader-line">{item.source === "guest" ? `From ${item.uploader_name}` : "Host upload"}{selected.cover_photo_id === item.id && <span><Wallpaper /> Event cover</span>}</div>
               {item.moderation_status === "pending" && <div className="moderation-actions"><button onClick={() => updateMedia(item, { moderationStatus: "approved" })}><Check /> Approve</button><button onClick={() => updateMedia(item, { moderationStatus: "rejected" })}><X /> Hide</button></div>}
               <div className="media-editor"><input value={captionDrafts[item.id] ?? ""} onChange={(event) => setCaptionDrafts((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Add a caption…" /><button onClick={() => updateMedia(item, { caption: captionDrafts[item.id] ?? "" })} aria-label="Save caption"><Save /></button>{!isVideo && <button onClick={() => void setCover(item)} aria-label="Use as event cover"><Wallpaper /></button>}<AlertDialog><AlertDialogTrigger asChild><button className="delete-media" aria-label={`Delete ${item.filename}`}><Trash2 /></button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete this memory?</AlertDialogTitle><AlertDialogDescription>This permanently removes {item.filename} from the event gallery.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep it</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => removeMedia(item.id)}>Delete memory</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>

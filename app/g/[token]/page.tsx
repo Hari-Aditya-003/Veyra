@@ -39,7 +39,6 @@ export default async function GalleryPage({ params, searchParams }: { params: Pr
           <div className="guest-event-icon"><LockKeyhole /></div>
           <p className="pink-eyebrow">{album.event_type}</p>
           <h1>{album.title}</h1>
-          {album.event_date && <time>{new Date(`${album.event_date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</time>}
           <p>Your QR brought you to the right place. Enter the guest details shared by your host to enjoy every photo and video.</p>
           {query.error && <div className="login-error">{query.error === "rate-limited" ? "Too many attempts. Please wait a few minutes before trying again." : "Those guest details do not match this event."}</div>}
           <form className="pink-form" action={`/api/gallery/${token}/unlock`} method="post">
@@ -69,8 +68,8 @@ export default async function GalleryPage({ params, searchParams }: { params: Pr
 
   return <GalleryView
     album={{
-      title: album.title, eventType: album.event_type, eventDate: album.event_date,
-      description: album.description, tagline: album.tagline, location: album.location,
+      title: album.title, eventType: album.event_type,
+      description: album.description, tagline: album.tagline,
       theme: album.theme, coverPhotoId: album.cover_photo_id,
       allowGuestUploads: Boolean(album.allow_guest_uploads),
       downloadsEnabled: Boolean(album.downloads_enabled),
