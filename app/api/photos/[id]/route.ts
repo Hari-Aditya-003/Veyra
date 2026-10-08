@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getPhoto } from "@/lib/data";
-import { mediaResponse } from "@/lib/media-response";
+import { deleteDriveFile, driveMediaResponse, GoogleDriveError } from "@/lib/google-drive";
 import { isAdmin } from "@/lib/security";
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -9,13 +9,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const { id } = await context.params;
   const photo = await getPhoto(id);
   if (!photo) return new Response("Not found", { status: 404 });
-  const object = await env.BUCKET.get(photo.object_key, request.headers.has("range") ? { range: request.headers } : undefined);
-  if (!object) return new Response("Not found", { status: 404 });
-  return mediaResponse(object, request, {
-    contentType: photo.content_type,
-    filename: photo.filename,
-    cacheControl: "private, max-age=3600",
-  });
+  try {
+    return await driveMediaResponse(photo.object_key, request, {
+      contentType: photo.content_type,
+      filename: photo.filename,
+      cacheControl: "private, max-age=3600",
+    });
+  } catch (error) {
+    return new Response(error instanceof GoogleDriveError ? error.message : "Google Drive is unavailable", {
+      status: error instanceof GoogleDriveError ? error.status : 502,
+    });
+  }
 }
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -23,7 +27,14 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   const { id } = await context.params;
   const photo = await getPhoto(id);
   if (!photo) return NextResponse.json({ error: "Photo not found" }, { status: 404 });
-  await env.BUCKET.delete(photo.object_key);
+  try {
+    await deleteDriveFile(photo.object_key);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof GoogleDriveError ? error.message : "Could not delete this item from Google Drive." },
+      { status: error instanceof GoogleDriveError ? error.status : 502 },
+    );
+  }
   await env.DB.batch([
     env.DB.prepare("UPDATE albums SET cover_photo_id = NULL WHERE cover_photo_id = ?").bind(id),
     env.DB.prepare("DELETE FROM photos WHERE id = ?").bind(id),

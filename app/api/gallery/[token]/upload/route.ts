@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { recordEventMetric } from "@/lib/analytics";
 import { getAlbumByToken } from "@/lib/data";
+import { deleteDriveFile, ensureEventDriveFolders, GoogleDriveError, uploadDriveMedia } from "@/lib/google-drive";
 import { canViewGallery } from "@/lib/security";
 import { isRateLimited } from "@/lib/rate-limit";
 import { isAllowedMedia } from "@/lib/uploads";
@@ -39,18 +40,28 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
   const moderationStatus = album.moderation_mode === "instant" ? "approved" : "pending";
   const created: Array<{ id: string; filename: string; moderationStatus: string }> = [];
-  for (const file of files) {
-    if (!isAllowedMedia(file) || file.size > MAX_FILE_SIZE) continue;
-    const photoId = crypto.randomUUID();
-    const objectKey = `albums/${album.id}/guest/${photoId}`;
-    await env.BUCKET.put(objectKey, file.stream(), { httpMetadata: { contentType: file.type } });
-    await env.DB.prepare(
-      `INSERT INTO photos (id, album_id, object_key, filename, content_type, caption,
-        is_featured, collection_id, moderation_status, uploader_name, source, size, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'guest', ?, ?)`,
-    ).bind(photoId, album.id, objectKey, file.name, file.type, caption, collectionId,
-      moderationStatus, uploaderName, file.size, Date.now()).run();
-    created.push({ id: photoId, filename: file.name, moderationStatus });
+  try {
+    const folders = await ensureEventDriveFolders(album);
+    for (const file of files) {
+      if (!isAllowedMedia(file) || file.size > MAX_FILE_SIZE) continue;
+      const photoId = crypto.randomUUID();
+      const uploaded = await uploadDriveMedia(file, folders.guestUploadsFolderId, { albumId: album.id, photoId, source: "guest" });
+      try {
+        await env.DB.prepare(
+          `INSERT INTO photos (id, album_id, object_key, filename, content_type, caption,
+            is_featured, collection_id, moderation_status, uploader_name, source, size, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'guest', ?, ?)`,
+        ).bind(photoId, album.id, uploaded.id, file.name, file.type, caption, collectionId,
+          moderationStatus, uploaderName, file.size, Date.now()).run();
+      } catch {
+        await deleteDriveFile(uploaded.id).catch(() => undefined);
+        throw new GoogleDriveError("The upload reached Google Drive but could not be added to the event.", 500);
+      }
+      created.push({ id: photoId, filename: file.name, moderationStatus });
+    }
+  } catch (error) {
+    const message = error instanceof GoogleDriveError ? error.message : "Google Drive upload failed.";
+    return NextResponse.json({ error: message }, { status: error instanceof GoogleDriveError ? error.status : 502 });
   }
   if (!created.length) return NextResponse.json({ error: "Files must be photos or videos under 75 MB" }, { status: 400 });
   await recordEventMetric(album.id, "guest_uploads", created.length);

@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import Link from "next/link";
 import {
   BarChart3, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, Copy, Download, ExternalLink, Eye, Film,
-  FolderPlus, ImagePlus, KeyRound, Link2, LogOut, Palette, Play, Plus, QrCode,
+  FolderOpen, FolderPlus, HardDrive, ImagePlus, KeyRound, LogOut, Palette, Play, Plus, QrCode,
   Pause, Save, Settings2, Sparkles, Star, Trash2, Upload, Wallpaper, X,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
@@ -23,6 +23,8 @@ type Album = {
   slideshow_playing: number; slideshow_position: number; slideshow_updated_at: number;
   guest_username: string; guest_password?: string; created_at: number; media_count: number; storage_bytes: number;
   gallery_views: number; downloads: number; guest_uploads: number; last_view_at: number;
+  drive_folder_id: string | null; drive_photos_folder_id: string | null;
+  drive_videos_folder_id: string | null; drive_guest_uploads_folder_id: string | null;
 };
 type Media = {
   id: string; album_id: string; filename: string; content_type: string; caption: string;
@@ -32,6 +34,10 @@ type Media = {
 };
 type Collection = { id: string; album_id: string; name: string; description: string; created_at: number };
 type QrMode = "gallery" | "upload" | "slideshow";
+type DriveStatus = {
+  configured: boolean; connected: boolean; email: string | null;
+  rootFolderId: string | null; rootFolderUrl: string | null;
+};
 
 const eventTypes = ["Wedding", "Engagement", "Haldi", "Mehendi", "Sangeet", "Reception", "Birthday", "Anniversary", "Festival", "Graduation", "College event", "Corporate", "Conference", "Concert", "Party", "Reunion", "Trip", "Family gathering", "Photography event", "Other"];
 const themes = [
@@ -58,6 +64,7 @@ export function AdminDashboard() {
   const [qrMode, setQrMode] = useState<QrMode>("gallery");
   const [busy, setBusy] = useState(false);
   const [captionDrafts, setCaptionDrafts] = useState<Record<string, string>>({});
+  const [driveStatus, setDriveStatus] = useState<DriveStatus>({ configured: false, connected: false, email: null, rootFolderId: null, rootFolderUrl: null });
 
   const selected = albums.find((album) => album.id === selectedId) ?? albums[0];
   const selectedMedia = useMemo(() => media.filter((item) => item.album_id === selected?.id), [media, selected]);
@@ -70,7 +77,11 @@ export function AdminDashboard() {
   }), [albums]);
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/albums", { cache: "no-store" });
+    const [response, driveResponse] = await Promise.all([
+      fetch("/api/albums", { cache: "no-store" }),
+      fetch("/api/admin/google-drive/status", { cache: "no-store" }),
+    ]);
+    if (driveResponse.ok) setDriveStatus(await driveResponse.json());
     if (!response.ok) return;
     const data = await response.json();
     setAlbums(data.albums); setMedia(data.photos); setCollections(data.collections);
@@ -79,6 +90,15 @@ export function AdminDashboard() {
   }, []);
 
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("drive");
+    if (!result) return;
+    if (result === "connected") toast.success("Google Drive connected — event folders are ready");
+    else if (result === "cancelled") toast.error("Google Drive connection was cancelled");
+    else if (result === "not-configured") toast.error("Google OAuth credentials still need to be configured");
+    else toast.error("Google Drive could not be connected. Please try again.");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
   useEffect(() => {
     const context = document.modelContext;
     if (!context?.registerTool) return;
@@ -246,17 +266,29 @@ export function AdminDashboard() {
           <div><span className="stat-icon pink"><CalendarDays /></span><p>Events</p><strong>{albums.length}</strong></div>
           <div><span className="stat-icon violet"><ImagePlus /></span><p>Memories</p><strong>{totals.media}</strong></div>
           <div><span className="stat-icon blue"><Eye /></span><p>Gallery views</p><strong>{totals.views.toLocaleString()}</strong></div>
-          <div><span className="stat-icon orange"><Download /></span><p>Cloud storage</p><strong>{formatBytes(totals.storage)}</strong></div>
+          <div><span className="stat-icon orange"><HardDrive /></span><p>Google Drive media</p><strong>{formatBytes(totals.storage)}</strong></div>
         </section>
 
         <div className="hub-content-grid">
+          <section className={`hub-card drive-connection-card ${driveStatus.connected ? "connected" : "needs-connection"}`}>
+            <div className="hub-card-title"><span><HardDrive /></span><div><h2>Google Drive</h2><p>All original photos and videos are stored only in your Drive.</p></div></div>
+            {driveStatus.connected ? <>
+              <div className="drive-connection-state"><span><Check /> Connected</span><strong>{driveStatus.email}</strong></div>
+              <div className="drive-folder-map"><span>Snap HUB</span><i>›</i><span>Event name</span><i>›</i><span>Photos · Videos · Guest Uploads · Highlights</span></div>
+              <div className="card-actions">{driveStatus.rootFolderUrl && <a href={driveStatus.rootFolderUrl} target="_blank" rel="noreferrer"><FolderOpen /> Open Snap HUB folder</a>}<a href="/api/admin/google-drive/connect"><HardDrive /> Reconnect Drive</a></div>
+            </> : <>
+              <p className="drive-connection-copy">Connect the host Google account before creating an event. Snap HUB will create one folder per event and sort every upload automatically.</p>
+              {driveStatus.configured ? <a className="drive-connect-button" href="/api/admin/google-drive/connect"><HardDrive /> Connect Google Drive</a> : <div className="draft-warning"><Clock3 /> Google OAuth setup is required before Drive can be connected.</div>}
+            </>}
+          </section>
+
           <section className="hub-card new-event-card" id="events">
-            <div className="hub-card-title"><span><Plus /></span><div><h2>Create an event</h2><p>Start with the essentials. New events stay private until you publish.</p></div></div>
+            <div className="hub-card-title"><span><Plus /></span><div><h2>Create an event</h2><p>Creates the event and its classified Google Drive folders together.</p></div></div>
             <form className="event-create-form" onSubmit={createAlbum}>
               <label>Event name<input name="title" required placeholder="e.g. Aditya’s 30th Birthday" /></label>
               <label>Type<select name="eventType">{eventTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
               <label>Short tagline<input name="tagline" placeholder="The beginning of forever" /></label>
-              <button disabled={busy}>Create draft event</button>
+              <button disabled={busy || !driveStatus.connected}>{driveStatus.connected ? "Create draft event" : "Connect Google Drive first"}</button>
             </form>
           </section>
 
@@ -299,7 +331,7 @@ export function AdminDashboard() {
             </div>
             <div className="permission-list"><label><input type="checkbox" checked={Boolean(selected.allow_guest_uploads)} onChange={(event) => updateSelected({ allow_guest_uploads: Number(event.target.checked) })} /><span><strong>Allow guest uploads</strong><small>Guests can add photos and videos from their browser.</small></span></label><label><input type="checkbox" checked={Boolean(selected.downloads_enabled)} onChange={(event) => updateSelected({ downloads_enabled: Number(event.target.checked) })} /><span><strong>Allow downloads</strong><small>Guests can save original event media.</small></span></label></div>
             <button className="save-button publish-button" onClick={() => void saveEvent()}>{selected.status === "live" ? <><CircleCheck /> Save live event</> : <><Save /> Save permissions</>}</button>
-            <div className="event-danger-zone"><div><strong>Delete event</strong><small>Remove this event, its guest links, albums, photos, and videos.</small></div><AlertDialog><AlertDialogTrigger asChild><button disabled={busy}><Trash2 /> Delete event</button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selected.title}?</AlertDialogTitle><AlertDialogDescription>This permanently removes the event and every stored photo and video. Shared QR codes and guest links will stop working.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep event</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => void removeEvent()}>Delete event permanently</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>
+            <div className="event-danger-zone"><div><strong>Delete event</strong><small>Remove this event, its guest links, and its complete Google Drive folder.</small></div><AlertDialog><AlertDialogTrigger asChild><button disabled={busy}><Trash2 /> Delete event</button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selected.title}?</AlertDialogTitle><AlertDialogDescription>This permanently removes the event folder, photos, and videos from Google Drive. Shared QR codes and guest links will stop working.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep event</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => void removeEvent()}>Delete event permanently</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>
           </section>}
 
           {selected && <section className="hub-card upload-card-new" id="uploads">
@@ -307,13 +339,13 @@ export function AdminDashboard() {
             <form onSubmit={upload} className="media-upload-form expanded-upload">
               <div className="upload-meta"><select name="collectionId">{selectedCollections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}</select><input name="caption" placeholder="Optional caption for this upload" /></div>
               <label><ImagePlus /><span><strong>Choose photos &amp; videos</strong><small>JPG, PNG, WebP, MP4 and MOV · up to 75 MB each</small></span><input type="file" name="photos" accept="image/*,video/*" multiple required /></label>
-              <button disabled={busy}>{busy ? "Uploading…" : "Upload memories"}</button>
+              <button disabled={busy || !driveStatus.connected}>{busy ? "Uploading…" : driveStatus.connected ? "Upload to Google Drive" : "Connect Google Drive first"}</button>
             </form>
             <form className="collection-form" onSubmit={createCollection}><input name="name" placeholder="New album name — e.g. Reception" required /><button><FolderPlus /> Add album</button></form>
             <div className="collection-chips">{selectedCollections.map((collection) => <span key={collection.id}>{collection.name}</span>)}</div>
           </section>}
 
-          {selected && <section className="hub-card storage-card"><div className="hub-card-title"><span><Link2 /></span><div><h2>Snap HUB storage</h2><p>Your event media is securely stored and ready for guests.</p></div></div><div className="storage-health"><span><Check /> Connected</span><strong>{formatBytes(selected.storage_bytes)} · {selected.media_count} files</strong></div></section>}
+          {selected && <section className="hub-card storage-card"><div className="hub-card-title"><span><HardDrive /></span><div><h2>Event folder in Google Drive</h2><p>No photo or video bytes are stored by Snap HUB.</p></div></div><div className="storage-health"><span><Check /> Drive only</span><strong>{formatBytes(selected.storage_bytes)} · {selected.media_count} files</strong></div>{selected.drive_folder_id && <div className="card-actions"><a href={`https://drive.google.com/drive/folders/${encodeURIComponent(selected.drive_folder_id)}`} target="_blank" rel="noreferrer"><FolderOpen /> Open {selected.title}</a></div>}</section>}
 
           {selected && <section className="hub-card activity-card"><div className="hub-card-title"><span><BarChart3 /></span><div><h2>Event activity</h2><p>Live guest engagement recorded for this event.</p></div></div><div className="activity-grid"><div><Eye /><span><strong>{Number(selected.gallery_views).toLocaleString()}</strong><small>Gallery views</small></span></div><div><Download /><span><strong>{Number(selected.downloads).toLocaleString()}</strong><small>Downloads</small></span></div><div><Upload /><span><strong>{Number(selected.guest_uploads).toLocaleString()}</strong><small>Guest uploads</small></span></div></div><small className="activity-note">{Number(selected.last_view_at) > 0 ? `Last guest view ${new Date(Number(selected.last_view_at)).toLocaleString()}` : "Share the gallery QR to begin tracking guest activity."}</small></section>}
         </div>

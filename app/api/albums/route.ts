@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
+import { createEventDriveFolders, deleteDriveFile, GoogleDriveError } from "@/lib/google-drive";
 import { hashGuestPassword, isAdmin, randomCode } from "@/lib/security";
 
 export async function GET() {
@@ -10,6 +11,8 @@ export async function GET() {
       a.allow_guest_uploads, a.moderation_mode, a.downloads_enabled,
       a.event_slug, a.cover_photo_id, a.slideshow_playing, a.slideshow_position,
       a.slideshow_updated_at, a.access_token, a.guest_username, a.created_at,
+      a.drive_folder_id, a.drive_photos_folder_id, a.drive_videos_folder_id,
+      a.drive_guest_uploads_folder_id,
       COUNT(p.id) AS media_count, COALESCE(SUM(p.size), 0) AS storage_bytes,
       COALESCE(MAX(m.gallery_views), 0) AS gallery_views,
       COALESCE(MAX(m.downloads), 0) AS downloads,
@@ -56,21 +59,39 @@ export async function POST(request: Request) {
   const baseSlug = title.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 44) || "event";
   const eventSlug = `${baseSlug}-${randomCode(4).toLowerCase()}`;
   const collectionId = crypto.randomUUID();
+  let driveFolders;
+  try {
+    driveFolders = await createEventDriveFolders(id, title);
+  } catch (error) {
+    const message = error instanceof GoogleDriveError ? error.message : "Could not create this event in Google Drive.";
+    return NextResponse.json({ error: message }, { status: error instanceof GoogleDriveError ? error.status : 502 });
+  }
 
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT INTO albums (id, title, event_type, event_date, description, tagline, location,
-        theme, expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
-        downloads_enabled, event_slug, access_token, guest_username, guest_password_hash, created_at)
-       VALUES (?, ?, ?, ?, '', ?, ?, 'rose', ?, 'draft', 'password', 0, 'manual', 1, ?, ?, ?, ?, ?)`,
-    ).bind(id, title, eventType, eventDate, tagline, location, expectedGuests, eventSlug, accessToken, guestUsername, passwordHash, createdAt),
-    env.DB.prepare(
-      "INSERT INTO event_collections (id, album_id, name, description, created_at) VALUES (?, ?, 'Main moments', '', ?)",
-    ).bind(collectionId, id, createdAt),
-    env.DB.prepare(
-      "INSERT INTO event_metrics (event_id, gallery_views, downloads, guest_uploads, last_view_at, last_download_at, last_guest_upload_at) VALUES (?, 0, 0, 0, 0, 0, 0)",
-    ).bind(id),
-  ]);
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO albums (id, title, event_type, event_date, description, tagline, location,
+          theme, expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
+          downloads_enabled, event_slug, access_token, guest_username, guest_password_hash,
+          drive_folder_id, drive_photos_folder_id, drive_videos_folder_id,
+          drive_guest_uploads_folder_id, created_at)
+         VALUES (?, ?, ?, ?, '', ?, ?, 'rose', ?, 'draft', 'password', 0, 'manual', 1,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(id, title, eventType, eventDate, tagline, location, expectedGuests, eventSlug,
+        accessToken, guestUsername, passwordHash, driveFolders.eventFolderId,
+        driveFolders.photosFolderId, driveFolders.videosFolderId,
+        driveFolders.guestUploadsFolderId, createdAt),
+      env.DB.prepare(
+        "INSERT INTO event_collections (id, album_id, name, description, created_at) VALUES (?, ?, 'Main moments', '', ?)",
+      ).bind(collectionId, id, createdAt),
+      env.DB.prepare(
+        "INSERT INTO event_metrics (event_id, gallery_views, downloads, guest_uploads, last_view_at, last_download_at, last_guest_upload_at) VALUES (?, 0, 0, 0, 0, 0, 0)",
+      ).bind(id),
+    ]);
+  } catch {
+    await deleteDriveFile(driveFolders.eventFolderId).catch(() => undefined);
+    return NextResponse.json({ error: "The Google Drive folder was created, but the event could not be saved." }, { status: 500 });
+  }
 
   return NextResponse.json({
     album: {
@@ -80,6 +101,10 @@ export async function POST(request: Request) {
       downloads_enabled: 1, event_slug: eventSlug, cover_photo_id: null,
       slideshow_playing: 1, slideshow_position: 0, slideshow_updated_at: 0,
       access_token: accessToken, guest_username: guestUsername, guest_password: guestPassword,
+      drive_folder_id: driveFolders.eventFolderId,
+      drive_photos_folder_id: driveFolders.photosFolderId,
+      drive_videos_folder_id: driveFolders.videosFolderId,
+      drive_guest_uploads_folder_id: driveFolders.guestUploadsFolderId,
       created_at: createdAt, media_count: 0, storage_bytes: 0,
       gallery_views: 0, downloads: 0, guest_uploads: 0, last_view_at: 0,
     },

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getAlbumById } from "@/lib/data";
+import { deleteDriveFile, GoogleDriveError } from "@/lib/google-drive";
 import { isAdmin } from "@/lib/security";
 
 const themes = new Set(["rose", "sunset", "violet", "ocean", "marigold"]);
@@ -58,10 +59,15 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   const album = await getAlbumById(id);
   if (!album) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
-  const media = await env.DB.prepare("SELECT object_key FROM photos WHERE album_id = ?").bind(id).all<{ object_key: string }>();
-  const objectKeys = media.results.map((item) => item.object_key);
-  for (let offset = 0; offset < objectKeys.length; offset += 1000) {
-    await env.BUCKET.delete(objectKeys.slice(offset, offset + 1000));
+  const mediaCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM photos WHERE album_id = ?")
+    .bind(id).first<{ count: number }>();
+  try {
+    await deleteDriveFile(album.drive_folder_id);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof GoogleDriveError ? error.message : "Could not delete the event folder from Google Drive." },
+      { status: error instanceof GoogleDriveError ? error.status : 502 },
+    );
   }
 
   await env.DB.batch([
@@ -71,5 +77,5 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     env.DB.prepare("DELETE FROM albums WHERE id = ?").bind(id),
   ]);
 
-  return NextResponse.json({ ok: true, deletedMedia: objectKeys.length });
+  return NextResponse.json({ ok: true, deletedMedia: Number(mediaCount?.count ?? 0) });
 }

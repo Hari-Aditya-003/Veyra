@@ -228,6 +228,18 @@ img, video { max-width: 100%; }
 @media (max-width: 430px) { .host-media-grid { grid-template-columns: 1fr; }.memory-grid { columns: 1; } }
 
 /* Phase 1 controls */
+.drive-connection-card { grid-column: 1/-1; border-color: #d7e4ff; background: linear-gradient(135deg,#fff 0%,#f7faff 55%,#fff8fc 100%); }
+.drive-connection-card.connected { border-color: #bfe7d0; }
+.drive-connection-state { margin-top: .9rem; padding: .75rem .85rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid #c8edd9; border-radius: .8rem; background: #f0fff7; }
+.drive-connection-state span { display: flex; align-items: center; gap: .35rem; color: #087a45; font-size: .74rem; font-weight: 900; }
+.drive-connection-state span svg { width: .95rem; }
+.drive-connection-state strong { color: #557067; font-size: .74rem; overflow-wrap: anywhere; }
+.drive-folder-map { margin-top: .65rem; display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; color: #71657f; font-size: .7rem; font-weight: 800; }
+.drive-folder-map span { padding: .38rem .55rem; border-radius: .55rem; background: #f4f0ff; }
+.drive-folder-map i { color: #ac95bd; font-style: normal; }
+.drive-connection-copy { margin: .8rem 0; max-width: 720px; color: #806d7c; font-size: .78rem; line-height: 1.55; }
+.drive-connect-button { min-height: 2.65rem; padding: .65rem .9rem; display: inline-flex; align-items: center; gap: .4rem; border-radius: .75rem; color: #fff; background: linear-gradient(125deg,#ff4fa3,#8b5cf6); font-size: .75rem; font-weight: 900; }
+.drive-connect-button svg { width: 1rem; }
 .wide-label input { width: 100%; min-height: 3rem; padding: 0 .9rem; border: 1px solid #ead3e1; border-radius: .82rem; color: var(--ink); background: #fffafd; outline: none; }
 .wide-label input:focus { border-color: #ff79b8; box-shadow: 0 0 0 4px rgba(255,61,152,.09); }
 .wide-label > svg { width: 1rem; }
@@ -390,6 +402,7 @@ img, video { max-width: 100%; }
   .collection-form { grid-template-columns: 1fr; }
   .collection-form button { min-height: 2.5rem; justify-content: center; }
   .storage-health { align-items: flex-start; flex-direction: column; }
+  .drive-connection-state { align-items: flex-start; flex-direction: column; }
   .event-danger-zone { align-items: flex-start; flex-direction: column; }
   .activity-grid { grid-template-columns: 1fr; }
   .media-editor { grid-template-columns: 1fr auto auto auto; }

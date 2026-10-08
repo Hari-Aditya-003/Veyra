@@ -25,6 +25,10 @@ export const albums = sqliteTable(
     accessToken: text("access_token").notNull().unique(),
     guestUsername: text("guest_username").notNull(),
     guestPasswordHash: text("guest_password_hash").notNull(),
+    driveFolderId: text("drive_folder_id"),
+    drivePhotosFolderId: text("drive_photos_folder_id"),
+    driveVideosFolderId: text("drive_videos_folder_id"),
+    driveGuestUploadsFolderId: text("drive_guest_uploads_folder_id"),
     createdAt: integer("created_at").notNull(),
   },
   (table) => [index("albums_token_idx").on(table.accessToken), index("albums_slug_idx").on(table.eventSlug)],
@@ -80,4 +84,13 @@ export const eventMetrics = sqliteTable("event_metrics", {
   lastViewAt: integer("last_view_at").notNull().default(0),
   lastDownloadAt: integer("last_download_at").notNull().default(0),
   lastGuestUploadAt: integer("last_guest_upload_at").notNull().default(0),
+});
+
+export const googleDriveConnections = sqliteTable("google_drive_connections", {
+  id: text("id").primaryKey(),
+  encryptedRefreshToken: text("encrypted_refresh_token").notNull(),
+  email: text("email").notNull().default(""),
+  rootFolderId: text("root_folder_id").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
 });

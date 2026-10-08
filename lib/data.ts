@@ -25,6 +25,10 @@ export type AlbumRecord = {
   access_token: string;
   guest_username: string;
   guest_password_hash: string;
+  drive_folder_id: string | null;
+  drive_photos_folder_id: string | null;
+  drive_videos_folder_id: string | null;
+  drive_guest_uploads_folder_id: string | null;
   created_at: number;
 };
 
@@ -51,7 +55,9 @@ export async function getAlbumByToken(token: string) {
       expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
       downloads_enabled, event_slug, cover_photo_id, slideshow_playing,
       slideshow_position, slideshow_updated_at, access_token, guest_username,
-      guest_password_hash, created_at FROM albums WHERE access_token = ? LIMIT 1`,
+      guest_password_hash, drive_folder_id, drive_photos_folder_id,
+      drive_videos_folder_id, drive_guest_uploads_folder_id, created_at
+     FROM albums WHERE access_token = ? LIMIT 1`,
   )
     .bind(token)
     .first<AlbumRecord>();
@@ -63,7 +69,9 @@ export async function getAlbumById(id: string) {
       expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
       downloads_enabled, event_slug, cover_photo_id, slideshow_playing,
       slideshow_position, slideshow_updated_at, access_token, guest_username,
-      guest_password_hash, created_at FROM albums WHERE id = ? LIMIT 1`,
+      guest_password_hash, drive_folder_id, drive_photos_folder_id,
+      drive_videos_folder_id, drive_guest_uploads_folder_id, created_at
+     FROM albums WHERE id = ? LIMIT 1`,
   )
     .bind(id)
     .first<AlbumRecord>();
@@ -75,7 +83,9 @@ export async function getAlbumBySlug(slug: string) {
       expected_guests, status, access_mode, allow_guest_uploads, moderation_mode,
       downloads_enabled, event_slug, cover_photo_id, slideshow_playing,
       slideshow_position, slideshow_updated_at, access_token, guest_username,
-      guest_password_hash, created_at FROM albums WHERE event_slug = ? LIMIT 1`,
+      guest_password_hash, drive_folder_id, drive_photos_folder_id,
+      drive_videos_folder_id, drive_guest_uploads_folder_id, created_at
+     FROM albums WHERE event_slug = ? LIMIT 1`,
   )
     .bind(slug)
     .first<AlbumRecord>();

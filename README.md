@@ -19,7 +19,7 @@ Host credentials are configured as deployment secrets and are never committed to
 - Event creation for weddings, birthdays, festivals, graduations, corporate events, concerts, and other celebrations
 - Private guest links, generated or rotated guest IDs/passwords, and downloadable QR codes
 - Separate QR targets for the gallery, guest uploads, and live slideshow
-- Photo and video uploads to object storage
+- Photo and video uploads directly to the host's Google Drive
 - Collections, captions, event cover photos, themes, and welcome text
 - Guest uploads with manual or instant moderation
 - Favorites, highlights, search, photo/video filters, and original downloads
@@ -35,10 +35,21 @@ Host credentials are configured as deployment secrets and are never committed to
 - Next.js-compatible React application built with Vinext and Vite
 - Cloudflare Worker runtime through OpenAI Sites
 - D1 for event and media metadata
-- R2 for original photo and video objects
+- Google Drive for every original photo and video; the Site keeps no media-object storage
 - SwiftUI and `WKWebView` for the signed iOS host app
 
-Google Drive and Google Photos are not connected in the testing build. Snap HUB currently stores uploads directly in its private R2 object storage. A Google connection requires a separate OAuth consent screen and Google API credentials before it can be enabled safely.
+The host connects Google Drive with OAuth from the admin dashboard. Snap HUB requests the limited `drive.file` scope and creates this structure automatically:
+
+```text
+Snap HUB/
+  Event name/
+    Photos/
+    Videos/
+    Guest Uploads/
+    Highlights/
+```
+
+Only event records, guest-access controls, captions, moderation state, and Google file IDs remain in D1. The original media bytes are stored only in Google Drive.
 
 ## Local web development
 
@@ -50,7 +61,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Set strong local values for `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `SESSION_SECRET` in `.env`. The development server starts on <http://127.0.0.1:5173>.
+Set strong local values for `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `SESSION_SECRET` in `.env`. Add a Google OAuth web client as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; its authorized redirect URI is `<site-origin>/api/admin/google-drive/callback`. The development server starts on <http://127.0.0.1:5173>.
 
 Useful checks:
 
